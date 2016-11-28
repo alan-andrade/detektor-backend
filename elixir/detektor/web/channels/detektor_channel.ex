@@ -12,6 +12,7 @@ defmodule Detektor.DetektorChannel do
     url = msg["url"]
     worker = :erlang.whereis(Detektor.Worker)
     res = GenServer.cast(worker, {:findKey, url, self()})
+    push socket, "findKey", %{status: "processing"}
     {:noreply, socket}
   end
 
@@ -20,6 +21,7 @@ defmodule Detektor.DetektorChannel do
     if status != 0 do
       push socket, "findKey", %{error: output}
     else
+      # TODO: Fix
       key = hd(Enum.take String.split(output, "\n"), -2)
       push socket, "findKey", %{key: key}
     end

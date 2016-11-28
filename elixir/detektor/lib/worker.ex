@@ -23,6 +23,7 @@ defmodule Detektor.Worker do
           {output, 0} ->
             result = %{key: hd(Enum.take String.split(output, "\n"), -2)}
             stateN = Map.put(state, url, result)
+            send parent, result
             {:noreply, stateN}
           {output, _} ->
             send(parent, %{error: output})
