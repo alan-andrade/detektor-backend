@@ -2,34 +2,24 @@ defmodule Detektor.DetektorChannel do
   use Phoenix.Channel
   require Logger
 
-  def join("detektor:main", message, socket) do
+  def join("detektor:main", _message, socket) do
     Process.flag(:trap_exit, true)
     {:ok, socket}
   end
 
-  def handle_in("findKey", msg, socket) do
-    Logger.debug"> request received: #{inspect msg}"
-    url = msg["url"]
+  def handle_in("getKeyForUrl", url, socket) do
+    Logger.debug"> request received: #{inspect url}"
     worker = :erlang.whereis(Detektor.Worker)
-    res = GenServer.cast(worker, {:findKey, url, self()})
-    push socket, "findKey", %{status: "processing"}
+    # TODO: Broadcasting to 1 worker is making the worker stop listening
+    # until it frees up. The messages are stored in a mailbox anyway, but this
+    # reduces the speed in which it will analyze a batch of tracks.
+    GenServer.cast(worker, {:findKey, url, self()})
     {:noreply, socket}
-  end
-
-  def handle_info :findKey, {output, status, socket}  do
-    Logger.debug"> handleinfo #{inspect output}"
-    if status != 0 do
-      push socket, "findKey", %{error: output}
-    else
-      # TODO: Fix
-      key = hd(Enum.take String.split(output, "\n"), -2)
-      push socket, "findKey", %{key: key}
-    end
   end
 
   def handle_info(msg, socket) do
     Logger.debug"> handle_info after:  #{inspect msg}"
-    push socket, "findKey", msg
+    push socket, "keyFound", msg
     {:noreply, socket}
   end
 
