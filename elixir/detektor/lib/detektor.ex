@@ -10,8 +10,8 @@ defmodule Detektor do
     children = [
       # Start the endpoint when the application starts
       supervisor(Detektor.Endpoint, []),
+      supervisor(Detektor.KeyDetection, [[], [name: Detektor.KeyDetection]]),
       # Start your own worker by calling: Detektor.Worker.start_link(arg1, arg2, arg3)
-      worker(Detektor.Worker, [Detektor.Supervisor, [name: Detektor.Worker]]),
     ]
 
     # See http://elixir-lang.org/docs/stable/elixir/Supervisor.html

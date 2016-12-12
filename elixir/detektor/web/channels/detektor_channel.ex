@@ -9,11 +9,7 @@ defmodule Detektor.DetektorChannel do
 
   def handle_in("getKeyForUrl", url, socket) do
     Logger.debug"> request received: #{inspect url}"
-    worker = :erlang.whereis(Detektor.Worker)
-    # TODO: Broadcasting to 1 worker is making the worker stop listening
-    # until it frees up. The messages are stored in a mailbox anyway, but this
-    # reduces the speed in which it will analyze a batch of tracks.
-    GenServer.cast(worker, {:findKey, url, self()})
+    Detektor.KeyDetection.queue({:findKey, %{url: url, parent: self()}})
     {:noreply, socket}
   end
 
