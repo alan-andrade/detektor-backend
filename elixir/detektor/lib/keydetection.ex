@@ -9,7 +9,6 @@ defmodule Detektor.KeyDetection do
   def init(:ok) do
     children = [
       worker(Detektor.Repo, [[name: Detektor.Repo]]),
-      worker(Detektor.Worker, [%{}, [name: Detektor.Worker]])
     ]
 
     supervise(children, strategy: :one_for_one)
@@ -17,6 +16,16 @@ defmodule Detektor.KeyDetection do
 
   def queue(job) do
     repo = Process.whereis(Detektor.Repo)
-    Detektor.Worker.findKey(job, repo)
+
+    {:ok, worker} = Detektor.Worker.start_link []
+
+    case Detektor.Repo.get(repo, job[:url]) do
+      nil ->
+        newJob = Map.merge(%{repo: repo}, job)
+        GenServer.cast(worker, {:findKey, newJob})
+      {:ok, track} ->
+        Logger.debug"> cache #{inspect track}"
+        send job[:parent], track
+    end
   end
 end
