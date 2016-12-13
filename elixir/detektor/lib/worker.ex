@@ -18,12 +18,17 @@ defmodule Detektor.Worker do
     parent = job[:parent]
     repo = job[:repo]
 
-    args = [url, "-x", "--audio-format", "mp3", "--no-playlist", "--exec", "~/dev/keyfinder-cli/keyfinder-cli -n camelot"]
+    args = [url, "-x", "--audio-format", "mp3", "--no-playlist", "--output", "%(title)s.%(ext)s", "--exec", "keyfinder-cli -n camelot"]
     Logger.debug"> youtube-dl #{inspect args}"
     case System.cmd("youtube-dl", args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
-        key = %{key: hd(Enum.take String.split(output, "\n"), -2)}
-        track = Map.merge(key, %{url: url})
+        regex = ~r/^(?:\[ffmpeg\] Destination: )(.+)(?:\.mp3)$/
+        split = String.split(output, "\n")
+        destination = hd Enum.filter(split, fn(s)-> Regex.match?(regex, s) end)
+        key = Enum.at(split, -2)
+        title = hd Regex.run(regex, destination, capture: :all_but_first)
+
+        track = %{url: url, title: title, key: key}
         Detektor.Repo.put(repo, url, {:ok, track})
         send parent, track
         {:noreply, state}
