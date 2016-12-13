@@ -8,13 +8,17 @@ defmodule Detektor.DetektorChannel do
   end
 
   def handle_in("getKeyForUrl", url, socket) do
-    Detektor.KeyDetection.queue(%{url: url, parent: self()})
+    Detektor.KeyDetection.queue(url, self())
     {:noreply, socket}
   end
 
-  def handle_info(msg, socket) do
-    Logger.debug"> handle_info after:  #{inspect msg}"
+  def handle_info({_, msg}, socket) do
+    Logger.debug" handle_info:  #{inspect msg}"
     push socket, "keyFound", msg
+    {:noreply, socket}
+  end
+
+  def handle_info(_, socket) do
     {:noreply, socket}
   end
 

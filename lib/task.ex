@@ -1,5 +1,4 @@
-defmodule Detektor.Worker do
-  use GenServer
+defmodule Detektor.Task do
   require Logger
 
   def start_link(state, opts \\ []) do
@@ -10,16 +9,26 @@ defmodule Detektor.Worker do
     {:ok, state}
   end
 
-  ## Server Callbacks
-  # args = [url, "-x", "--audio-format", "mp3", "--no-playlist", "--exec", "~/dev/keyfinder-cli/keyfinder-cli -n camelot"]
-  # youtube-dl --get-duration url
-  def handle_cast({:findKey, job}, state) do
-    url = job[:url]
-    parent = job[:parent]
-    repo = job[:repo]
+  def findKey(url, parent, repo) do
+    case Detektor.Repo.get(repo, url) do
+      nil ->
+        Detektor.Task._findKey(url, parent, repo)
+      {:ok, track} ->
+        Logger.debug"> cache #{inspect track}"
+        send parent, track
+    end
+  end
 
-    args = [url, "-x", "--audio-format", "mp3", "--no-playlist", "--output", "%(title)s.%(ext)s", "--exec", "keyfinder-cli -n camelot"]
-    Logger.debug"> youtube-dl #{inspect args}"
+  def _findKey(url, parent, repo) do
+    args = [
+      url,
+     "-x", "--audio-format",
+     "mp3",
+     "--no-playlist",
+     "--output", "%(title)s.%(ext)s",
+     "--exec", "keyfinder-cli -n camelot"]
+
+    Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
     case System.cmd("youtube-dl", args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
         regex = ~r/^(?:\[ffmpeg\] Destination: )(.+)(?:\.mp3)$/
@@ -29,12 +38,11 @@ defmodule Detektor.Worker do
         title = hd Regex.run(regex, destination, capture: :all_but_first)
 
         track = %{url: url, title: title, key: key}
+        Logger.debug"> reult #{inspect track}"
         Detektor.Repo.put(repo, url, {:ok, track})
         send parent, track
-        {:noreply, state}
       {output, _} ->
         send(parent, %{error: output})
-        {:noreply, state}
     end
   end
 end
