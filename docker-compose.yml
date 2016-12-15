@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  web: &default
+    build: .
+    command: "mix phoenix.server"
+    ports:
+      - "4000:4000"
+    volumes:
+      - .:/detektor-backend
