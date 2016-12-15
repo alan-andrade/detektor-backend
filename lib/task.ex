@@ -38,7 +38,7 @@ defmodule Detektor.Task do
         title = hd Regex.run(regex, destination, capture: :all_but_first)
 
         track = %{url: url, title: title, key: key}
-        Logger.debug"> reult #{inspect track}"
+        Logger.debug"> Result: #{inspect track}"
         Detektor.Repo.put(repo, url, {:ok, track})
         send parent, track
       {output, _} ->

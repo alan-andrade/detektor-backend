@@ -13,7 +13,6 @@ defmodule Detektor.DetektorChannel do
   end
 
   def handle_info({_, msg}, socket) do
-    Logger.debug" handle_info:  #{inspect msg}"
     push socket, "keyFound", msg
     {:noreply, socket}
   end
