@@ -25,7 +25,7 @@ defmodule Detektor.Task do
      "-x", "--audio-format",
      "mp3",
      "--no-playlist",
-     "--output", "%(title)s.%(ext)s",
+     "--output", "downloads/%(title)s.%(ext)s",
      "--exec", "keyfinder-cli -n camelot"]
 
     Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
