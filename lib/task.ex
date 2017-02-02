@@ -9,6 +9,26 @@ defmodule Detektor.Task do
     {:ok, state}
   end
 
+  def fetchPlaylist(url, parent, _) do
+    cmd = "youtube-dl"
+    args = [ url, "--flat-playlist", "-J"]
+
+    case System.cmd(cmd, args, [parallelism: true, stderr_to_stdout: true]) do
+      {output, 0} ->
+        {:ok, youtubeHash}  = output |> String.split("\n") |> hd |> Poison.decode
+
+        constructYoutubeURL = fn(id) -> "https://www.youtube.com/watch?v=#{id}" end
+
+        youtubeHash["entries"] |> Enum.each(fn entry ->
+          entry["id"] |> constructYoutubeURL.() |> Detektor.KeyDetection.queue(:findKey, parent)
+        end)
+
+      {output, _} ->
+        Logger.error "> failed youtube-dl #{output}"
+        send(parent, %{error: output})
+    end
+  end
+
   def findKey(url, parent, repo) do
     case Detektor.Repo.get(repo, url) do
       nil ->
