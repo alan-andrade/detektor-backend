@@ -8,7 +8,12 @@ defmodule Detektor.DetektorChannel do
   end
 
   def handle_in("getKeyForUrl", url, socket) do
-    Detektor.KeyDetection.queue(url, self())
+    Detektor.KeyDetection.queue(url, :findKey, self())
+    {:noreply, socket}
+  end
+
+  def handle_in("getPlaylistForUrl", url, socket) do
+    Detektor.KeyDetection.queue(url, :fetchPlaylist, self())
     {:noreply, socket}
   end
 
