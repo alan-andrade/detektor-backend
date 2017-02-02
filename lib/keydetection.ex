@@ -15,9 +15,9 @@ defmodule Detektor.KeyDetection do
     supervise(children, strategy: :one_for_one)
   end
 
-  def queue(url, parent) do
+  def queue(url, task, parent) do
     pid  = Process.whereis(Task.Supervisor)
     repo = Process.whereis(Detektor.Repo)
-    Task.Supervisor.async(pid, Detektor.Task, :findKey, [url, parent, repo])
+    Task.Supervisor.async(pid, Detektor.Task, task, [url, parent, repo])
   end
 end
