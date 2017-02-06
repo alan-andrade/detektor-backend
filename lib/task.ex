@@ -13,6 +13,7 @@ defmodule Detektor.Task do
     cmd = "youtube-dl"
     args = [ url, "--flat-playlist", "-J"]
 
+    Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
     case System.cmd(cmd, args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
         {:ok, youtubeHash}  = output |> String.split("\n") |> hd |> Poison.decode
@@ -35,7 +36,7 @@ defmodule Detektor.Task do
         Detektor.Task._findKey(url, parent, repo)
       {:ok, track} ->
         Logger.debug"> cache #{inspect track}"
-        send parent, track
+        send parent, {:keyFound, track}
     end
   end
 
@@ -51,17 +52,18 @@ defmodule Detektor.Task do
     Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
     case System.cmd("youtube-dl", args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
-        regex = ~r/^(?:\[ffmpeg\] Destination: )(.+)(?:\.mp3)$/
+        regex = ~r/^(?:\[ffmpeg\] Destination: downloads\/)(.+)(?:\.mp3)$/
         split = String.split(output, "\n")
-        destination = hd Enum.filter(split, fn(s)-> Regex.match?(regex, s) end)
-        key = Enum.at(split, -2)
-        title = hd Regex.run(regex, destination, capture: :all_but_first)
+        destination = split |> Enum.filter(fn(s)-> Regex.match?(regex, s) end) |> hd
+        key = split |> Enum.at(-2)
+        title = regex |> Regex.run(destination, capture: :all_but_first) |> hd
 
         track = %{url: url, title: title, key: key}
         Logger.debug"> Result: #{inspect track}"
         Detektor.Repo.put(repo, url, {:ok, track})
-        send parent, track
+        send parent, {:keyFound, track}
       {output, _} ->
+        Logger.error "> youtube-dl error: #{output}"
         send(parent, %{error: output})
     end
   end
