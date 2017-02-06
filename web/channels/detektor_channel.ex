@@ -18,8 +18,13 @@ defmodule Detektor.DetektorChannel do
   end
 
   def handle_info({_, msg}, socket) do
-    push socket, "keyFound", msg
-    {:noreply, socket}
+    case msg do
+      :ok ->
+        {:noreply, socket}
+      _ ->
+        push socket, "keyFound", msg
+        {:noreply, socket}
+    end
   end
 
   def handle_info(_, socket) do
