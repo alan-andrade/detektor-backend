@@ -20,6 +20,8 @@ defmodule Detektor.DetektorChannel do
   def handle_info({_, msg}, socket) do
     case msg do
       :ok ->
+        # when no msg is explicity fired by the process, it seems a default :ok is sent
+        # TODO: look into this!
         {:noreply, socket}
       _ ->
         push socket, "keyFound", msg
