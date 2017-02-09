@@ -16,13 +16,11 @@ defmodule Detektor.Task do
     Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
     case System.cmd(cmd, args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
-        {:ok, youtubeHash}  = output |> String.split("\n") |> hd |> Poison.decode
+        {:ok, playlistHash}  = output |> String.split("\n") |> hd |> Poison.decode
 
-        constructYoutubeURL = fn(id) -> "https://www.youtube.com/watch?v=#{id}" end
-
-        youtubeHash["entries"] |> Enum.each(fn entry ->
-          entry["id"] |> constructYoutubeURL.() |> Detektor.KeyDetection.queue(:findKey, parent)
-        end)
+        for entry <- playlistHash["entries"] do
+          entry["url"] |> Detektor.KeyDetection.queue(:findKey, parent)
+        end
 
       {output, _} ->
         Logger.error "> failed youtube-dl #{output}"
@@ -52,19 +50,23 @@ defmodule Detektor.Task do
     Logger.debug"> youtube-dl #{Enum.join(args, " ")}"
     case System.cmd("youtube-dl", args, [parallelism: true, stderr_to_stdout: true]) do
       {output, 0} ->
-        regex = ~r/^(?:\[ffmpeg\] Destination: downloads\/)(.+)(?:\.mp3)$/
-        split = String.split(output, "\n")
-        destination = split |> Enum.filter(fn(s)-> Regex.match?(regex, s) end) |> hd
-        key = split |> Enum.at(-2)
-        title = regex |> Regex.run(destination, capture: :all_but_first) |> hd
-
-        track = %{url: url, title: title, key: key}
-        Logger.debug"> Result: #{inspect track}"
+        track = output |> parseDownloadOutput(url)
         Detektor.Repo.put(repo, url, {:ok, track})
         send parent, {:keyFound, track}
+
       {output, _} ->
         Logger.error "> youtube-dl error: #{output}"
         send(parent, %{error: output})
     end
+  end
+
+  defp parseDownloadOutput(output, url) do
+    regex = ~r/^(?:\[ffmpeg\] Destination: downloads\/)(.+)(?:\.mp3)$/
+    split = String.split(output, "\n")
+    destination = split |> Enum.filter(fn(s)-> Regex.match?(regex, s) end) |> hd
+    key = split |> Enum.at(-2)
+    title = regex |> Regex.run(destination, capture: :all_but_first) |> hd
+
+    %{url: url, title: title, key: key}
   end
 end
