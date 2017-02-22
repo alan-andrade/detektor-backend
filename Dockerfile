@@ -9,7 +9,7 @@ RUN yes | pacman -Syyu
 ENV LANG en_US.UTF-8
 
 # Installing vim, elixir and phoenix
-RUN yes | pacman -Sy vim binutils sed make curl git libunistring
+RUN yes | pacman -Sy vim binutils sed make curl git libunistring python-pip
 
 RUN yes | pacman -Sy elixir
 RUN yes | pacman -Sy youtube-dl
@@ -41,6 +41,9 @@ WORKDIR /detektor-backend
 
 # BUILD DEPENDENCIES
 RUN yes | mix deps.get
+
+# Make sure that youtube-dl is up to date
+RUN yes | pip install --upgrade youtube-dl
 
 # ADD REST OF APPLICATION CODE
 ADD . /detektor-backend
